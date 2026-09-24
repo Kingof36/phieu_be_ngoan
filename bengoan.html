@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniBook - Kết Bạn, Nhắn Tin & Phiếu Bé Ngoan</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --fb-bg: #f0f2f5;
+            --fb-blue: #0866ff;
+            --fb-blue-hover: #1877f2;
+            --fb-card: #ffffff;
+            --fb-text: #050505;
+            --fb-secondary: #65676b;
+        }
+        body { background-color: var(--fb-bg); font-family: system-ui, -apple-system, sans-serif; color: var(--fb-text); margin: 0; }
+        .fb-navbar { background: var(--fb-card); height: 56px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+        .main-container { margin-top: 76px; max-width: 1200px; margin-left: auto; margin-right: auto; padding: 0 15px; }
+        .screen { display: none; }
+        .screen.active { display: block; }
+        .fb-card { background: var(--fb-card); border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); padding: 16px; margin-bottom: 16px; }
+        .btn-fb-primary { background-color: var(--fb-blue); color: white; font-weight: 600; border: none; border-radius: 6px; padding: 8px 16px; }
+        .btn-fb-primary:hover { background-color: var(--fb-blue-hover); color: white; }
+        .chat-box { height: 350px; overflow-y: auto; background: #f0f2f5; padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 8px; }
+        .chat-bubble { max-width: 70%; padding: 8px 12px; border-radius: 12px; font-size: 0.95rem; word-wrap: break-word; }
+        .chat-bubble.incoming { background: #e4e6eb; align-self: flex-start; }
+        .chat-bubble.outgoing { background: var(--fb-blue); color: white; align-self: flex-end; }
+        .badge-card { border-left: 4px solid #f59e0b; background: #fffbeb; }
+        .avatar-circle { width: 40px; height: 40px; border-radius: 50%; background: #e4e6eb; display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--fb-secondary); }
+    </style>
+</head>
+<body>
+
+    <nav class="fb-navbar" id="mainNav" style="display:none;">
+        <h4 class="text-primary fw-bold m-0"><i class="fa-brands fa-facebook"></i> MiniBook</h4>
+        <div class="d-flex align-items-center gap-3">
+            <span class="fw-semibold" id="navUserName"></span>
+            <button class="btn btn-sm btn-outline-danger rounded-pill" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Đăng xuất</button>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <!-- ĐĂNG NHẬP -->
+        <div id="screenLogin" class="screen active">
+            <div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+                <div class="col-md-5">
+                    <div class="fb-card p-4 shadow-sm text-center">
+                        <h2 class="text-primary fw-bold mb-3">MiniBook & Bé Ngoan</h2>
+                        <p class="text-muted small mb-4">Dữ liệu lưu trực tiếp lên Google Sheets bảo mật!</p>
+                        <div class="mb-3 text-start">
+                            <label class="form-label fw-bold small">Tên tài khoản / Họ tên:</label>
+                            <input type="text" id="loginName" class="form-control" placeholder="Nhập tên của bạn...">
+                        </div>
+                        <div class="mb-3 text-start">
+                            <label class="form-label fw-bold small">Mật khẩu Admin (nếu đăng nhập quản trị):</label>
+                            <input type="password" id="loginAdminPass" class="form-control" placeholder="Để trống nếu là thành viên...">
+                        </div>
+                        <button class="btn btn-fb-primary w-100 py-2" onclick="handleLogin()">Vào Hệ Thống</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÀN HÌNH CHÍNH -->
+        <div id="screenUserHome" class="screen">
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="fb-card badge-card mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="fw-bold text-warning mb-1"><i class="fa-solid fa-award me-1"></i> Phiếu Bé Ngoan Của Tôi</h5>
+                                <p class="text-muted small mb-0">Tuần: <b id="lblCurrentWeek"></b></p>
+                            </div>
+                            <span class="badge bg-warning text-dark fs-5 px-3 py-2 rounded-pill"><span id="myBadgeCount">0</span> Phiếu</span>
+                        </div>
+                    </div>
+                    <div class="fb-card">
+                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-user-group text-primary me-2"></i> Thành Viên & Kết Bạn</h5>
+                        <div id="usersListContainer" class="d-flex flex-column gap-3">Đang tải dữ liệu...</div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="fb-card">
+                        <h5 class="fw-bold mb-3"><i class="fa-solid fa-trophy text-warning me-2"></i> Bảng Vàng Bé Ngoan</h5>
+                        <div id="leaderboardContainer" class="d-flex flex-column gap-2">Đang tải dữ liệu...</div>
+                    </div>
+                    <div class="fb-card" id="chatCard" style="display:none;">
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
+                            <h6 class="fw-bold m-0" id="chatTitle">Nhắn tin</h6>
+                            <button class="btn btn-sm btn-light" onclick="closeChat()"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div class="chat-box mb-2" id="chatMessagesBox"></div>
+                        <div class="input-group">
+                            <input type="text" id="chatInputText" class="form-control" placeholder="Nhập tin nhắn..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+                            <button class="btn btn-fb-primary" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÀN HÌNH ADMIN -->
+        <div id="screenAdminHome" class="screen">
+            <div class="fb-card">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-3">
+                    <div>
+                        <h3 class="fw-bold text-danger m-0"><i class="fa-solid fa-shield-halved me-2"></i> Bảng Quản Trị Phiếu Bé Ngoan</h3>
+                        <p class="text-muted small m-0">Phát phiếu bé ngoan trực tiếp vào Google Sheets.</p>
+                    </div>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="logout()"><i class="fa-solid fa-arrow-left"></i> Thoát</button>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="fw-bold mb-3">Phát Phiếu Bé Ngoan</h5>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Chọn người nhận:</label>
+                            <select id="adminTargetUser" class="form-select"></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Số lượng:</label>
+                            <input type="number" id="adminBadgeAmount" class="form-control" value="1" min="1">
+                        </div>
+                        <button class="btn btn-danger w-100 py-2 fw-bold" onclick="adminGiveBadge()"><i class="fa-solid fa-gift me-1"></i> Phát Phiếu Ngay</button>
+                    </div>
+                    <div class="col-md-6 border-start">
+                        <h5 class="fw-bold mb-3">Thông Tin Tuần</h5>
+                        <p class="small text-muted">Tuần hệ thống hiện tại đang ghi nhận:</p>
+                        <div class="p-3 bg-light rounded mb-3"><b id="adminCurrentWeekDisplay"></b></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ THAY URL GOOGLE APPS SCRIPT CỦA BẠN VÀO ĐÂY ⚠️
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzgaoqKEiA3CDFNAnAG9eSjSq4cEtD6p9vY6VmZkA_nfRFhnkRLFgZuSigue49v78jF/exec";
+        const ADMIN_PASS = "Tuanvy2009@";
+
+        let serverData = { users: [], friendships: [], messages: [], badges: [] };
+        let currentUser = null;
+        let chatWithUser = null;
+        let currentWeek = getISOWeekString(new Date());
+
+        function getISOWeekString(date) {
+            let d = new Date(date);
+            d.setHours(0,0,0,0);
+            d.setDate(d.getDate() + 4 - (d.getDay()||7));
+            let yearStart = new Date(d.getFullYear(),0,1);
+            let weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+            return `${d.getFullYear()}-W${weekNo}`;
+        }
+
+        async function fetchServerData() {
+            try {
+                let res = await fetch(WEB_APP_URL + "?action=getData");
+                serverData = await res.json();
+            } catch(e) { console.error("Lỗi tải dữ liệu", e); }
+        }
+
+        async function handleLogin() {
+            let name = document.getElementById("loginName").value.trim();
+            let pass = document.getElementById("loginAdminPass").value.trim();
+            if (!name) { alert("Vui lòng nhập tên!"); return; }
+
+            await fetchServerData();
+
+            if (pass === ADMIN_PASS) {
+                currentUser = { name, isAdmin: true };
+                document.getElementById("mainNav").style.display = "flex";
+                document.getElementById("navUserName").innerText = `${name} (Admin)`;
+                switchScreen("screenAdminHome");
+                initAdminPanel();
+                return;
+            }
+            if (pass !== "") { alert("Sai mật khẩu Admin!"); return; }
+
+            currentUser = { name, isAdmin: false };
+            
+            // Đăng ký user lên sheet nếu chưa có
+            await fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "registerUser", username: name })
+            });
+
+            document.getElementById("mainNav").style.display = "flex";
+            document.getElementById("navUserName").innerText = name;
+            switchScreen("screenUserHome");
+            initUserHome();
+        }
+
+        function logout() {
+            currentUser = null;
+            chatWithUser = null;
+            document.getElementById("mainNav").style.display = "none";
+            switchScreen("screenLogin");
+        }
+
+        function switchScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        async function initUserHome() {
+            document.getElementById("lblCurrentWeek").innerText = currentWeek;
+            await fetchServerData();
+            renderMyBadgeCount();
+            renderUsersList();
+            renderLeaderboard();
+        }
+
+        function renderMyBadgeCount() {
+            let record = serverData.badges.find(b => String(b.Week) === currentWeek && String(b.Username).toLowerCase() === currentUser.name.toLowerCase());
+            document.getElementById("myBadgeCount").innerText = record ? record.Count : 0;
+        }
+
+        function renderUsersList() {
+            const container = document.getElementById("usersListContainer");
+            container.innerHTML = "";
+            let others = serverData.users.filter(u => u.Username !== currentUser.name);
+
+            if (others.length === 0) {
+                container.innerHTML = "<p class='text-muted small'>Chưa có thành viên nào khác.</p>";
+                return;
+            }
+
+            others.forEach(uObj => {
+                let u = uObj.Username;
+                let friendship = serverData.friendships.find(f => 
+                    (f.User1 === currentUser.name && f.User2 === u) || 
+                    (f.User1 === u && f.User2 === currentUser.name)
+                );
+
+                let btnHtml = '';
+                let chatBtnHtml = '';
+
+                if (!friendship) {
+                    btnHtml = `<button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="sendFriendRequest('${u}')">Kết bạn</button>`;
+                } else if (friendship.Status === 'pending') {
+                    if (friendship.User2 === currentUser.name) {
+                        btnHtml = `<button class="btn btn-sm btn-success rounded-pill px-3" onclick="acceptFriend('${u}')">Chấp nhận</button>`;
+                    } else {
+                        btnHtml = `<button class="btn btn-sm btn-secondary rounded-pill px-3" disabled>Đã gửi</button>`;
+                    }
+                } else if (friendship.Status === 'accepted') {
+                    btnHtml = `<button class="btn btn-sm btn-light text-success rounded-pill px-3 border" disabled>Bạn bè</button>`;
+                    chatBtnHtml = `<button class="btn btn-sm btn-fb-primary rounded-pill px-3 ms-2" onclick="openChat('${u}')">Nhắn tin</button>`;
+                }
+
+                container.innerHTML += `
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="avatar-circle">${u.charAt(0).toUpperCase()}</div>
+                            <span class="fw-bold">${u}</span>
+                        </div>
+                        <div>${btnHtml} ${chatBtnHtml}</div>
+                    </div>
+                `;
+            });
+        }
+
+        async function sendFriendRequest(target) {
+            await fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "sendFriendRequest", user1: currentUser.name, user2: target })
+            });
+            initUserHome();
+        }
+
+        async function acceptFriend(from) {
+            await fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "acceptFriend", user1: from, user2: currentUser.name })
+            });
+            initUserHome();
+        }
+
+        function openChat(u) {
+            chatWithUser = u;
+            document.getElementById("chatCard").style.display = "block";
+            document.getElementById("chatTitle").innerText = `Nhắn tin với ${u}`;
+            renderChatMessages();
+        }
+
+        function closeChat() {
+            chatWithUser = null;
+            document.getElementById("chatCard").style.display = "none";
+        }
+
+        async function sendChatMessage() {
+            let input = document.getElementById("chatInputText");
+            let text = input.value.trim();
+            if (!text || !chatWithUser) return;
+
+            let time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            await fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "sendMessage", from: currentUser.name, to: chatWithUser, text, time })
+            });
+            input.value = "";
+            await fetchServerData();
+            renderChatMessages();
+        }
+
+        function renderChatMessages() {
+            const box = document.getElementById("chatMessagesBox");
+            box.innerHTML = "";
+            let msgs = serverData.messages.filter(m => 
+                (m.From === currentUser.name && m.To === chatWithUser) || 
+                (m.From === chatWithUser && m.To === currentUser.name)
+            );
+
+            msgs.forEach(m => {
+                let isOut = m.From === currentUser.name;
+                box.innerHTML += `<div class="chat-bubble ${isOut ? 'outgoing' : 'incoming'}">${m.Text}</div>`;
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderLeaderboard() {
+            const container = document.getElementById("leaderboardContainer");
+            container.innerHTML = "";
+            let weekly = serverData.badges.filter(b => String(b.Week) === currentWeek);
+            weekly.sort((a, b) => b.Count - a.Count);
+
+            if (weekly.length === 0) {
+                container.innerHTML = "<p class='text-muted small text-center'>Tuần này chưa có phiếu nào.</p>";
+                return;
+            }
+
+            weekly.forEach((item, idx) => {
+                container.innerHTML += `
+                    <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded">
+                        <span>#${idx+1} <b>${item.Username}</b></span>
+                        <span class="badge bg-warning text-dark">${item.Count} phiếu</span>
+                    </div>`;
+            });
+        }
+
+        function initAdminPanel() {
+            document.getElementById("adminCurrentWeekDisplay").innerText = currentWeek;
+            const select = document.getElementById("adminTargetUser");
+            select.innerHTML = "";
+            serverData.users.forEach(u => {
+                select.innerHTML += `<option value="${u.Username}">${u.Username}</option>`;
+            });
+        }
+
+        async function adminGiveBadge() {
+            let target = document.getElementById("adminTargetUser").value;
+            let amount = document.getElementById("adminBadgeAmount").value;
+            if (!target) return;
+
+            await fetch(WEB_APP_URL, {
+                method: "POST",
+                body: JSON.stringify({ action: "giveBadge", week: currentWeek, username: target, amount })
+            });
+            alert("Đã phát phiếu bé ngoan thành công vào Google Sheets!");
+        }
+    </script>
+</body>
+</html>
